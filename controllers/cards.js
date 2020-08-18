@@ -1,9 +1,9 @@
 /* eslint-disable linebreak-style */
 /* eslint-disable eol-last */
 const path = require('path');
-const getFile = require('../helpers');
+const readFile = require('../helpers');
 
-const getCards = (req, res) => getFile(path.join(__dirname, '../data/cards.json'))
+const getCards = (req, res) => readFile(path.join(__dirname, '../data/cards.json'))
   .then((data) => {
     res
       .status(200)
