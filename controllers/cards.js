@@ -1,5 +1,5 @@
 /* eslint-disable linebreak-style */
-/* eslint-disable eol-last */
+
 const path = require('path');
 const readFile = require('../helpers');
 

@@ -1,5 +1,5 @@
 /* eslint-disable linebreak-style */
-/* eslint-disable eol-last */
+
 const express = require('express');
 const { getAllUsers, getUser } = require('../controllers/users.js');
 
