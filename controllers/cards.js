@@ -1,56 +1,114 @@
-const Card = require('../models/card');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const User = require('../models/user');
 const BadRequestError = require('../errors/BadRequestError');
 const NotFoundError = require('../errors/NotFoundError');
+const TokenError = require('../errors/TokenError');
+const ConflictError = require('../errors/ConflictError');
 
-module.exports.getCards = (req, res) => {
-  Card.find({})
-    .populate('user')
-    .then((cards) => res.send({ data: cards }))
-    .catch((err) => res.status(500).send({ message: `На сервере произошла ошибка: ${err.message}` }));
+module.exports.getAllUsers = (req, res, next) => {
+  User.find({})
+    .then((users) => res.send({ data: users }))
+    .catch(next);
 };
 
-module.exports.createCard = (req, res, next) => {
-  const { name, link } = req.body;
+module.exports.getUser = (req, res, next) => {
+  User.findById(req.params._id)
+    .orFail()
+    .catch(() => {
+      throw new NotFoundError({ message: `Пользователь с идентификатором ${req.params.id} не найден` });
+    })
+    .then((user) => res.send({ data: user }))
+    .catch(next);
+};
 
-  Card.create({ name, link, owner: req.user._id })
+module.exports.createUser = (req, res, next) => {
+  bcrypt.hash(req.body.password, 10)
+    .then((hash) => User.create({
+      email: req.body.email,
+      password: hash,
+      name: req.body.name ? req.body.name : undefined,
+      avatar: req.body.avatar ? req.body.avatar : undefined,
+      about: req.body.about ? req.body.about : undefined,
+    }))
     .catch((err) => {
-      throw new BadRequestError({ message: `Указаны некорректные данные при создании карточки: ${err.message}` });
+      if (err.name === 'MongoError') {
+        throw new ConflictError({ message: 'Пользователь с таким email уже существует' });
+      }
+      throw new BadRequestError({ message: `Запрос некорректен: ${err.message}` });
     })
-    .then((card) => res.send({ data: card }))
+    .then((user) => {
+      res.send({
+        data: {
+          _id: user._id,
+          email: user.email,
+          name: user.name ? user.name : undefined,
+          avatar: user.avatar ? user.avatar : undefined,
+          about: user.about ? user.about : undefined,
+        },
+      });
+    })
     .catch(next);
 };
 
-module.exports.deleteCard = (req, res, next) => {
-  Card.findByIdAndDelete(req.params._id)
-    .orFail()
-    .catch(() => {
-      throw new NotFoundError({ message: 'Нет карточки с таким id' });
+module.exports.updateUser = (req, res, next) => {
+  const { name, about } = req.body;
+  const currentOwner = req.user._id;
+  User.findByIdAndUpdate(req.user._id,
+    { name, about },
+    {
+      new: true,
+      runValidators: true,
     })
-    .then((card) => res.send({ data: card }))
+    .orFail()
+    .catch((err) => {
+      if (err instanceof NotFoundError) {
+        throw err;
+      }
+      throw new BadRequestError({ message: `Запрос некорректен: ${err.message}` });
+    })
+    .then((updatedUser) => {
+      if (currentOwner !== updatedUser._id) {
+        throw new BadRequestError({ message: 'Запрос некорректен' });
+      }
+      res.send({ data: updatedUser });
+    })
     .catch(next);
 };
 
-module.exports.likeCard = (req, res, next) => {
-  Card.findByIdAndUpdate(req.params._id,
-    { $addToSet: { likes: req.user._id } },
-    { new: true })
-    .orFail()
-    .catch(() => {
-      throw new NotFoundError({ message: 'Нет карточки с таким id' });
+module.exports.updateAvatar = (req, res, next) => {
+  const { avatar } = req.body;
+
+  User.findByIdAndUpdate(req.user._id,
+    { avatar },
+    {
+      new: true,
+      runValidators: true,
     })
-    .then((likes) => res.send({ data: likes }))
+    .orFail()
+    .catch((err) => {
+      if (err instanceof NotFoundError) {
+        throw err;
+      }
+      throw new BadRequestError({ message: `Запрос некорректен: ${err.message}` });
+    })
+    .then((updatedAvatar) => res.send({ data: updatedAvatar }))
     .catch(next);
 };
 
-module.exports.dislikeCard = (req, res, next) => {
-  Card.findByIdAndUpdate(req.params._id,
-    { $pull: { likes: req.user._id } },
-    { new: true })
-    .orFail()
+module.exports.login = (req, res, next) => {
+  const { email, password } = req.body;
+  return User.findUserByCredentials(email, password)
     .catch(() => {
-      throw new NotFoundError({ message: 'Нет карточки с таким id' });
+      throw new TokenError({ message: `Пользователь с идентификатором ${req.body.email} не найден` });
     })
-    .then((likes) => res.send({ data: likes }))
+    .then((user) => {
+      const token = jwt.sign(
+        { _id: user._id },
+        'some-secret-key',
+        { expiresIn: '7d' },
+      );
+      res.send({ token });
+    })
     .catch(next);
 };
-//

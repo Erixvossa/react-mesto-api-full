@@ -1,14 +1,21 @@
-/* eslint-disable linebreak-style */
 
 const express = require('express');
-const mongoose = require('mongoose');
-const bodyParser = require('body-parser');
-const users = require('./routes/users.js');
-const cards = require('./routes/cards.js');
 
-const { PORT = 3000 } = process.env;
+const bodyParser = require('body-parser');
 
 const app = express();
+const mongoose = require('mongoose');
+const { celebrate, Joi } = require('celebrate');
+const { errors } = require('celebrate');
+const {
+  usersRouter,
+  cardsRouter,
+} = require('./routes');
+const { login, createUser } = require('./controllers/users.js');
+const auth = require('./middlewares/auth');
+const { requestLogger, errorLogger } = require('./middlewares/logger');
+
+const { PORT = 3000 } = process.env;
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -17,28 +24,61 @@ mongoose.connect('mongodb://localhost:27017/mestodb', {
   useNewUrlParser: true,
   useCreateIndex: true,
   useFindAndModify: false,
-  useUnifiedTopology: true,
 });
 
-app.use((req, res, next) => {
-  req.user = {
-    _id: '5f4e8410b826c6cad0f64a07',
-  };
-  next();
+app.use(requestLogger);
+
+app.get('/crash-test', () => {
+  setTimeout(() => {
+    throw new Error('Сервер сейчас упадёт');
+  }, 0);
 });
 
-app.use('/', users);
-app.use('/', cards);
+app.post('/signin', celebrate({
+  body: Joi.object().keys({
+    email: Joi.string().required().email(),
+    password: Joi.string().required().min(6).max(30),
+  }),
+}), login);
+
+app.get('/crash-test', () => {
+  setTimeout(() => {
+    throw new Error('Сервер сейчас упадёт');
+  }, 0);
+});
+
+app.post('/signup', celebrate({
+  body: Joi.object().keys({
+    email: Joi.string().required().email(),
+    password: Joi.string().required().min(6).max(30),
+    name: Joi.string().min(2).max(30),
+    about: Joi.string().min(2).max(30),
+    avatar: Joi.string(),
+  }),
+}), createUser);
+
+app.use(auth);
+
+app.use('/users', usersRouter);
+app.use('/cards', cardsRouter);
+
+app.use(errorLogger);
+
+app.use(errors());
+
+app.use((req, res) => {
+  res
+    .status(404)
+    .send({ message: 'Запрашиваемый ресурс не найден' });
+});
+
 app.use((err, req, res, next) => {
-  if (err.status !== '500') {
-    res.status(err.status).send(err.message);
+  if (err.status === '500' || err.status === undefined) {
+    res.status(500).send({ message: `На сервере произошла ошибка: ${err.message}` });
     return;
   }
-  res.status(500).send({ message: `На сервере произошла ошибка: ${err.message}` });
+  res.status(err.status).send(err.message);
   next();
-});
-app.use((req, res) => {
-  res.status(404).send({ message: '404 Запрашиваемый ресурс не найден' });
 });
 
 app.listen(PORT, () => {

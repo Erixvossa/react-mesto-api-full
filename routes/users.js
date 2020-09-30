@@ -1,18 +1,31 @@
-/* eslint-disable linebreak-style */
-
-const users = require('express').Router();
+const router = require('express').Router();
+const { celebrate, Joi } = require('celebrate');
 const {
-  getUsers,
-  getCurrentUser,
-  createUser,
+  getAllUsers,
+  getUser,
   updateUser,
   updateAvatar,
 } = require('../controllers/users');
 
-users.get('/users', getUsers);
-users.get('/users/:_id', getCurrentUser);
-users.post('/users', createUser);
-users.patch('/users/me', updateUser);
-users.patch('/users/me/avatar', updateAvatar);
+router.get('/', getAllUsers);
 
-module.exports = users;
+router.get('/:_id', celebrate({
+  body: Joi.object().keys({
+    _id: Joi.string().required(),
+  }),
+}), getUser);
+
+router.patch('/me', celebrate({
+  body: Joi.object().keys({
+    name: Joi.string().required().min(2).max(30),
+    about: Joi.string().required().min(2).max(30),
+  }),
+}), updateUser);
+
+router.patch('/me/avatar', celebrate({
+  body: Joi.object().keys({
+    avatar: Joi.string().required().pattern(/^((http|https):\/\/)(www\.)?([a-zA-z0-9.-]+)\.([a-zA-z]+)([a-zA-z0-9%$?/.-]+)?(#)?$/),
+  }),
+}), updateAvatar);
+
+module.exports = router;

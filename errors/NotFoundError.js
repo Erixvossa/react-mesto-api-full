@@ -1,7 +1,6 @@
-/* eslint-disable linebreak-style */
 class NotFoundError extends Error {
-  constructor(message, ...rest) {
-    super(...rest);
+  constructor(message) {
+    super(message);
     this.status = 404;
     this.message = message;
   }

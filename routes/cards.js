@@ -1,17 +1,40 @@
-/* eslint-disable linebreak-style */
-const cardsRouter = require('express').Router();
+const express = require('express');
+const { celebrate, Joi } = require('celebrate');
 const {
-  getCards,
+  getAllCards,
   createCard,
   deleteCard,
   likeCard,
   dislikeCard,
 } = require('../controllers/cards');
 
-cardsRouter.get('/cards', getCards);
-cardsRouter.post('/cards', createCard);
-cardsRouter.delete('/cards/:_id', deleteCard);
-cardsRouter.put('/cards/:_id/likes', likeCard);
-cardsRouter.delete('/cards/:_id/likes', dislikeCard);
+const cardsRouter = express.Router();
+
+cardsRouter.get('/', getAllCards);
+
+cardsRouter.post('/', celebrate({
+  body: Joi.object().keys({
+    name: Joi.string().required().min(2).max(30),
+    link: Joi.string().required().pattern(/^((http|https):\/\/)(www\.)?([a-zA-z0-9.-]+)\.([a-zA-z]+)([a-zA-z0-9%$?/.-]+)?(#)?$/),
+  }),
+}), createCard);
+
+cardsRouter.delete('/:_id', celebrate({
+  body: Joi.object().keys({
+    _id: Joi.string().alphanum().length(24).hex(),
+  }),
+}), deleteCard);
+
+cardsRouter.put('/:_id/likes', celebrate({
+  body: Joi.object().keys({
+    _id: Joi.string().alphanum().length(24).hex(),
+  }),
+}), likeCard);
+
+cardsRouter.delete('/:_id/likes', celebrate({
+  body: Joi.object().keys({
+    _id: Joi.string().alphanum().length(24).hex(),
+  }),
+}), dislikeCard);
 
 module.exports = cardsRouter;
