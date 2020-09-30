@@ -1,21 +1,15 @@
-# Проект 12: Node-Место
-
+# Проект 15: react-mesto-api-full
 
 
 ### Обзор
 
-* Написание простого сервера на Node express
-* MongoDB
-
-**Написание простого сервера на Node express**
-
-Базовый функционал Node и Express
-
-**MongoDB**
-
-Подключение сервера к базе данных
+* Готовое приложение на node & react
 
 
-**Запуск проекта**
-npm run start — запускает сервер
-npm run dev — запускает сервер с hot-reload
+**Ссылка на работающее приложение**
+
+http://evossa.students.nomoreparties.co/
+
+**Ссылка на гит с кодом**
+
+https://github.com/Erixvossa/react-mesto-api-full/
