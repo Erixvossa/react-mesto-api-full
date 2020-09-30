@@ -1,4 +1,3 @@
-
 const express = require('express');
 
 const bodyParser = require('body-parser');
@@ -14,6 +13,8 @@ const {
 const { login, createUser } = require('./controllers/users.js');
 const auth = require('./middlewares/auth');
 const { requestLogger, errorLogger } = require('./middlewares/logger');
+
+const NotFoundError = require('./errors/NotFoundError');
 
 const { PORT = 3000 } = process.env;
 
@@ -60,17 +61,16 @@ app.post('/signup', celebrate({
 app.use(auth);
 
 app.use('/users', usersRouter);
+
 app.use('/cards', cardsRouter);
+
+app.use(() => {
+  throw new NotFoundError({ message: 'Запрашиваемый ресурс не найден' });
+});
 
 app.use(errorLogger);
 
 app.use(errors());
-
-app.use((req, res) => {
-  res
-    .status(404)
-    .send({ message: 'Запрашиваемый ресурс не найден' });
-});
 
 app.use((err, req, res, next) => {
   if (err.status === '500' || err.status === undefined) {
