@@ -13,3 +13,6 @@ http://evossa.students.nomoreparties.co/
 **Ссылка на гит с кодом**
 
 https://github.com/Erixvossa/react-mesto-api-full/
+
+**публичный ip адрес сервера**
+178.154.224.41
